@@ -1,14 +1,81 @@
 require("dotenv").config(); 
 const express = require("express")
-const app = express()
 const PORT = process.env.PORT
 const GROQ_API = process.env.GROQ_API
+const app = express()
 
-console.log('api' , GROQ_API)
+app.use(express.json())
 
-import Groq from "groq-sdk";
+import Groq from "groq-sdk"
+import { BASE_PROMPT, getSystemPrompt } from "./prompt"
+import { response } from "express";
+import { basePrompt as REACT_BASE_PROMPT } from './defaults/react'
+import { basePrompt as NODE_BASE_PROMPT } from "./defaults/node"
 
 const groq = new Groq() // creates a new instance for groq 
+
+// template for react or node post req
+app.post('/template' , async (req: any , res: any)=>{
+    const prompt = req.body.prompt
+    const response = await groq.chat.completions.create({
+
+        messages: [
+          {
+            role: "user",
+            content: "for this prompt " + prompt + "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra",
+          },
+        ],
+
+        model: "llama3-8b-8192",
+        temperature: 0.5,
+        max_tokens: 1024,
+        top_p: 1,
+        stop: null
+      });
+
+    const answer = response.choices[0].message.content || "";
+    
+    if (answer == "React") {
+        res.json({
+            prompts: [BASE_PROMPT, `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${REACT_BASE_PROMPT}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
+            uiPrompts: [REACT_BASE_PROMPT] // THIS needs to send to the frontend , above for LLm 
+        })
+        return;
+    }
+
+    if (answer === "Node") {
+        res.json({
+            prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${NODE_BASE_PROMPT}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
+            uiPrompts: [NODE_BASE_PROMPT]
+        })
+        return;
+    }
+
+    res.status(403).json({message : "Invalid Prompt or API Key"})
+
+})
+
+
+// chat endpoint
+app.post('/chat' , async (req: any , res: any)=>{
+    const message = req.body.message
+    const response = await groq.chat.completions.create({
+        messages: message, // array of obj (role and content)
+        model: "llama3-8b-8192",
+        temperature: 0.5,
+        max_tokens: 1024,
+        top_p: 1,
+        stop: null
+      });
+
+    //   console.log('message' , message)
+    console.log('response from LLM' , response.choices[0].message)
+
+
+})
+
+
+
 
 export async function main() {
   const stream = await getGroqChatStream();
@@ -22,21 +89,17 @@ export async function getGroqChatStream() {
   return groq.chat.completions.create({
 
     messages: [
-      // Set an optional system message. This sets the behavior of the
-      // assistant and can be used to provide specific instructions for
-      // how it should behave throughout the conversation.
       {
         role: "system",
         content: "you are a helpful assistant.",
       },
-      // Set a user message for the assistant to respond to.
       {
         role: "user",
-        content: "what is  2+2",
+        content: getSystemPrompt("write a code for todo app in reactjs"),
       },
     ],
 
-    // The language model which will generate the completion.
+
     model: "llama3-8b-8192",
 
     temperature: 0.5,
@@ -57,8 +120,6 @@ export async function getGroqChatStream() {
     stream: true,
   });
 }
-
-main()
 
 
 

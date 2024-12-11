@@ -23,12 +23,62 @@ exports.main = main;
 exports.getGroqChatStream = getGroqChatStream;
 require("dotenv").config();
 const express = require("express");
-const app = express();
 const PORT = process.env.PORT;
 const GROQ_API = process.env.GROQ_API;
-console.log('api', GROQ_API);
+const app = express();
+app.use(express.json());
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
+const prompt_1 = require("./prompt");
+const react_1 = require("./defaults/react");
+const node_1 = require("./defaults/node");
 const groq = new groq_sdk_1.default(); // creates a new instance for groq 
+// template for react or node post req
+app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const prompt = req.body.prompt;
+    const response = yield groq.chat.completions.create({
+        messages: [
+            {
+                role: "user",
+                content: "for this prompt " + prompt + "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra",
+            },
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.5,
+        max_tokens: 1024,
+        top_p: 1,
+        stop: null
+    });
+    const answer = response.choices[0].message.content || "";
+    if (answer == "React") {
+        res.json({
+            prompts: [prompt_1.BASE_PROMPT, `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${react_1.basePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
+            uiPrompts: [react_1.basePrompt] // THIS needs to send to the frontend , above for LLm 
+        });
+        return;
+    }
+    if (answer === "Node") {
+        res.json({
+            prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${node_1.basePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
+            uiPrompts: [node_1.basePrompt]
+        });
+        return;
+    }
+    res.status(403).json({ message: "Invalid Prompt or API Key" });
+}));
+// chat endpoint
+app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const message = req.body.message;
+    const response = yield groq.chat.completions.create({
+        messages: message, // array of obj (role and content)
+        model: "llama3-8b-8192",
+        temperature: 0.5,
+        max_tokens: 1024,
+        top_p: 1,
+        stop: null
+    });
+    //   console.log('message' , message)
+    console.log('response from LLM', response.choices[0].message);
+}));
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, e_1, _b, _c;
@@ -56,20 +106,15 @@ function getGroqChatStream() {
     return __awaiter(this, void 0, void 0, function* () {
         return groq.chat.completions.create({
             messages: [
-                // Set an optional system message. This sets the behavior of the
-                // assistant and can be used to provide specific instructions for
-                // how it should behave throughout the conversation.
                 {
                     role: "system",
                     content: "you are a helpful assistant.",
                 },
-                // Set a user message for the assistant to respond to.
                 {
                     role: "user",
-                    content: "what is  2+2",
+                    content: (0, prompt_1.getSystemPrompt)("write a code for todo app in reactjs"),
                 },
             ],
-            // The language model which will generate the completion.
             model: "llama3-8b-8192",
             temperature: 0.5,
             max_tokens: 1024,
@@ -86,7 +131,6 @@ function getGroqChatStream() {
         });
     });
 }
-main();
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
 });
