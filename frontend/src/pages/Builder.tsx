@@ -3,14 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { StepsList } from '../components/StepsList';
 import { FileExplorer } from '../components/FileExplorer';
 import { TabView } from '../components/TabView';
-import { CodeEditor } from '../components/CodeEditor';
-import { PreviewFrame } from '../components/PreviewFrame';
 import { Step, FileItem, StepType } from '../types';
 import axios from 'axios';
 import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
-import { useWebContainer } from '../hooks/useWebContainer';
-import { FileNode } from '@webcontainer/api';
 import { Loader } from '../components/Loader';
 
 const MOCK_FILE_CONTENT = `// This is a sample file content
@@ -26,6 +22,7 @@ export function Builder() {
   const location = useLocation();
   const { prompt } = location.state as { prompt: string };
   const [userPrompt, setPrompt] = useState("");
+  const [llmMessages, setLlmMessages] = useState<{role: "user" | "assistant", content: string;}[]>([]);
   const [loading, setLoading] = useState(false);
   const [templateSet, setTemplateSet] = useState(false);
 
@@ -45,15 +42,21 @@ export function Builder() {
     setTemplateSet(true);
     
     const {prompts, uiPrompts} = response.data;
-    console.log('prompts' , prompts , uiPrompts)
 
-    // set the intial steps 
-    const stepResponse = await axios.post(`${BACKEND_URL}/chat` , { // 1.beauty  2.affilate 3.user input 
-      messages: [...prompts , prompt].map(content => ({
+    setSteps(parseXml(uiPrompts[0]).map((x: Step) => ({ // parsed templates mapping for steps in sidebar
+      ...x,
+      status: "pending"
+    })));
+
+    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+      messages: [...prompts, prompt].map(content => ({
         role: "user",
         content
       }))
     })
+
+
+  }
 
   useEffect(() => {
     init();
@@ -85,6 +88,24 @@ export function Builder() {
                     <textarea value={userPrompt} onChange={(e) => {
                     setPrompt(e.target.value)
                   }} className='p-2 w-full'></textarea>
+                  <button onClick={async () => {
+                    const newMessage = {
+                      role: "user" as "user",
+                      content: userPrompt
+                    };
+
+                    setLoading(true);
+                    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+                      messages: [...llmMessages, newMessage]
+                    });
+                    setLoading(false);
+                    
+                    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
+                      ...x,
+                      status: "pending" as "pending"
+                    }))]);
+
+                  }} className='bg-purple-400 px-4'>Send</button>
                   </div>}
                 </div>
               </div>
@@ -98,10 +119,10 @@ export function Builder() {
             </div>
           <div className="col-span-2 bg-gray-900 rounded-lg shadow-lg p-4 h-[calc(100vh-8rem)]">
             <TabView activeTab={activeTab} onTabChange={setActiveTab} />
+   
           </div>
         </div>
       </div>
     </div>
   );
-  }
 }

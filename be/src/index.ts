@@ -1,10 +1,12 @@
 require("dotenv").config(); 
 const express = require("express")
+const cors = require('cors')
 const PORT = process.env.PORT
 const GROQ_API = process.env.GROQ_API
 const app = express()
 
 app.use(express.json())
+app.use(cors())
 
 import Groq from "groq-sdk"
 import { BASE_PROMPT, getSystemPrompt } from "./prompt"
