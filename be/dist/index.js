@@ -76,8 +76,6 @@ app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         top_p: 1,
         stop: null
     });
-    //   console.log('message' , message)
-    console.log('response from LLM', response.choices[0].message);
 }));
 function main() {
     return __awaiter(this, void 0, void 0, function* () {

@@ -8,7 +8,6 @@ app.use(express.json())
 
 import Groq from "groq-sdk"
 import { BASE_PROMPT, getSystemPrompt } from "./prompt"
-import { response } from "express";
 import { basePrompt as REACT_BASE_PROMPT } from './defaults/react'
 import { basePrompt as NODE_BASE_PROMPT } from "./defaults/node"
 
@@ -67,10 +66,6 @@ app.post('/chat' , async (req: any , res: any)=>{
         top_p: 1,
         stop: null
       });
-
-    //   console.log('message' , message)
-    console.log('response from LLM' , response.choices[0].message)
-
 
 })
 
