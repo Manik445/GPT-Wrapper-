@@ -2,12 +2,15 @@
   "dependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/xmldom": "^0.1.34",
+    "@webcontainer/api": "^1.5.1-internal.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "groq-sdk": "^0.9.0",
     "nodemon": "^3.1.7",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "xmldom": "^0.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.1"

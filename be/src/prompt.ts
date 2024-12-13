@@ -186,23 +186,6 @@ Here are some examples of correct usage of artifacts:
     </assistant_response>
   </example>
 
-  <example>
-    <user_query>Build a snake game</user_query>
-
-    <assistant_response>
-      Certainly! I'd be happy to help you build a snake game using JavaScript and HTML5 Canvas. This will be a basic implementation that you can later expand upon. Let's create the game step by step.
-
-      <boltArtifact id="snake-game" title="Snake Game in HTML and JavaScript">
-        <boltAction type="file" filePath="package.json">
-          {
-            "name": "snake",
-            "scripts": {
-              "dev": "vite"
-            }
-            ...
-          }
-        </boltAction>
-
         <boltAction type="shell">
           npm install --save-dev vite
         </boltAction>
