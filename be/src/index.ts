@@ -1,14 +1,15 @@
 require("dotenv").config(); 
 const express = require("express")
+import cors from "cors"
 const PORT = process.env.PORT
 const GROQ_API = process.env.GROQ_API
 const app = express()
 
 app.use(express.json())
+app.use(cors())
 
 import Groq from "groq-sdk"
-import { BASE_PROMPT, getSystemPrompt } from "./prompt"
-import { response } from "express";
+import { BASE_PROMPT , getSystemPrompt } from "./prompt"
 import { basePrompt as REACT_BASE_PROMPT } from './defaults/react'
 import { basePrompt as NODE_BASE_PROMPT } from "./defaults/node"
 
@@ -33,9 +34,12 @@ app.post('/template' , async (req: any , res: any)=>{
         stop: null
       });
 
-    const answer = response.choices[0].message.content || "";
+    const answer =  (response.choices[0].message.content)?.toLowerCase() || "";
+
+
+    console.log('this is tempalte clg' , answer)
     
-    if (answer == "React") {
+    if (answer === "react") {
         res.json({
             prompts: [BASE_PROMPT, `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${REACT_BASE_PROMPT}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
             uiPrompts: [REACT_BASE_PROMPT] // THIS needs to send to the frontend , above for LLm 
@@ -43,7 +47,7 @@ app.post('/template' , async (req: any , res: any)=>{
         return;
     }
 
-    if (answer === "Node") {
+    if (answer === "node") {
         res.json({
             prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${NODE_BASE_PROMPT}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
             uiPrompts: [NODE_BASE_PROMPT]
@@ -52,74 +56,42 @@ app.post('/template' , async (req: any , res: any)=>{
     }
 
     res.status(403).json({message : "Invalid Prompt or API Key"})
-
+    return; 
 })
 
 
 // chat endpoint
-app.post('/chat' , async (req: any , res: any)=>{
-    const message = req.body.message
-    const response = await groq.chat.completions.create({
-        messages: message, // array of obj (role and content)
+app.post('/chat', async (req: any, res: any) => {
+    try {
+      const messages = req.body.messages;
+  
+      // Ensure the messages array is valid
+      if (!Array.isArray(messages) || !messages.every((msg: any) => msg.role && msg.content)) {
+        return res.status(400).json({ error: "Invalid message format. Each message should have 'role' and 'content'." });
+      }
+  
+      // Call the groq chat API
+      const response = await groq.chat.completions.create({
+        messages: messages, // Array of { role, content }
         model: "llama3-8b-8192",
         temperature: 0.5,
         max_tokens: 1024,
         top_p: 1,
-        stop: null
+        stop: null,
       });
-
-    //   console.log('message' , message)
-    console.log('response from LLM' , response.choices[0].message)
-
-
-})
-
-
-
-
-export async function main() {
-  const stream = await getGroqChatStream();
-  for await (const chunk of stream) {
-    // Print the completion returned by the LLM.
-    console.log(chunk.choices[0]?.delta?.content || "");
-  }
-}
-
-export async function getGroqChatStream() {
-  return groq.chat.completions.create({
-
-    messages: [
-      {
-        role: "system",
-        content: "you are a helpful assistant.",
-      },
-      {
-        role: "user",
-        content: getSystemPrompt("write a code for todo app in reactjs"),
-      },
-    ],
-
-
-    model: "llama3-8b-8192",
-
-    temperature: 0.5,
-
-    max_tokens: 1024,
-
-    // Controls diversity via nucleus sampling: 0.5 means half of all
-    // likelihood-weighted options are considered.
-    top_p: 1,
-
-    // A stop sequence is a predefined or user-specified text string that
-    // signals an AI to stop generating content, ensuring its responses
-    // remain focused and concise. Examples include punctuation marks and
-    // markers like "[end]".
-    stop: null,
-
-    // If set, partial message deltas will be sent.
-    stream: true,
+  
+      // Parse and log the response
+      const rawContent = response.choices[0]?.message?.content ?? "";
+      const parsedResponse = getSystemPrompt(rawContent);
+      console.log('Chat Response:', parsedResponse);
+  
+      // Send the response back to the client
+      res.json({ response: parsedResponse });
+    } catch (error) {
+      res.status(500).json({ error: "An error occurred while processing your request. Please try again later." });
+    }
   });
-}
+  
 
 
 

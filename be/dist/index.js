@@ -8,25 +8,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.main = main;
-exports.getGroqChatStream = getGroqChatStream;
 require("dotenv").config();
 const express = require("express");
+const cors_1 = __importDefault(require("cors"));
 const PORT = process.env.PORT;
 const GROQ_API = process.env.GROQ_API;
 const app = express();
 app.use(express.json());
+app.use((0, cors_1.default)());
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const prompt_1 = require("./prompt");
 const react_1 = require("./defaults/react");
@@ -34,6 +27,7 @@ const node_1 = require("./defaults/node");
 const groq = new groq_sdk_1.default(); // creates a new instance for groq 
 // template for react or node post req
 app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const prompt = req.body.prompt;
     const response = yield groq.chat.completions.create({
         messages: [
@@ -48,15 +42,16 @@ app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         top_p: 1,
         stop: null
     });
-    const answer = response.choices[0].message.content || "";
-    if (answer == "React") {
+    const answer = ((_a = (response.choices[0].message.content)) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || "";
+    console.log('this is tempalte clg', answer);
+    if (answer === "react") {
         res.json({
             prompts: [prompt_1.BASE_PROMPT, `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${react_1.basePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
             uiPrompts: [react_1.basePrompt] // THIS needs to send to the frontend , above for LLm 
         });
         return;
     }
-    if (answer === "Node") {
+    if (answer === "node") {
         res.json({
             prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${node_1.basePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
             uiPrompts: [node_1.basePrompt]
@@ -64,73 +59,37 @@ app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         return;
     }
     res.status(403).json({ message: "Invalid Prompt or API Key" });
+    return;
 }));
 // chat endpoint
 app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const message = req.body.message;
-    const response = yield groq.chat.completions.create({
-        messages: message, // array of obj (role and content)
-        model: "llama3-8b-8192",
-        temperature: 0.5,
-        max_tokens: 1024,
-        top_p: 1,
-        stop: null
-    });
-    //   console.log('message' , message)
-    console.log('response from LLM', response.choices[0].message);
-}));
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a, e_1, _b, _c;
-        var _d, _e;
-        const stream = yield getGroqChatStream();
-        try {
-            for (var _f = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _f = true) {
-                _c = stream_1_1.value;
-                _f = false;
-                const chunk = _c;
-                // Print the completion returned by the LLM.
-                console.log(((_e = (_d = chunk.choices[0]) === null || _d === void 0 ? void 0 : _d.delta) === null || _e === void 0 ? void 0 : _e.content) || "");
-            }
+    var _a, _b, _c;
+    try {
+        const messages = req.body.messages;
+        // Ensure the messages array is valid
+        if (!Array.isArray(messages) || !messages.every((msg) => msg.role && msg.content)) {
+            return res.status(400).json({ error: "Invalid message format. Each message should have 'role' and 'content'." });
         }
-        catch (e_1_1) { e_1 = { error: e_1_1 }; }
-        finally {
-            try {
-                if (!_f && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
-            }
-            finally { if (e_1) throw e_1.error; }
-        }
-    });
-}
-function getGroqChatStream() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: "you are a helpful assistant.",
-                },
-                {
-                    role: "user",
-                    content: (0, prompt_1.getSystemPrompt)("write a code for todo app in reactjs"),
-                },
-            ],
+        // Call the groq chat API
+        const response = yield groq.chat.completions.create({
+            messages: messages, // Array of { role, content }
             model: "llama3-8b-8192",
             temperature: 0.5,
             max_tokens: 1024,
-            // Controls diversity via nucleus sampling: 0.5 means half of all
-            // likelihood-weighted options are considered.
             top_p: 1,
-            // A stop sequence is a predefined or user-specified text string that
-            // signals an AI to stop generating content, ensuring its responses
-            // remain focused and concise. Examples include punctuation marks and
-            // markers like "[end]".
             stop: null,
-            // If set, partial message deltas will be sent.
-            stream: true,
         });
-    });
-}
+        // Parse and log the response
+        const rawContent = (_c = (_b = (_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content) !== null && _c !== void 0 ? _c : "";
+        const parsedResponse = (0, prompt_1.getSystemPrompt)(rawContent);
+        console.log('Chat Response:', parsedResponse);
+        // Send the response back to the client
+        res.json({ response: parsedResponse });
+    }
+    catch (error) {
+        res.status(500).json({ error: "An error occurred while processing your request. Please try again later." });
+    }
+}));
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
 });
