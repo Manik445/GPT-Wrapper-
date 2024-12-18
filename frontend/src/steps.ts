@@ -28,17 +28,18 @@ import { Step, StepType } from './types';
  * 
  * The input can have strings in the middle they need to be ignored
  */
+
+let stepId = 1;
 export function parseXml(response: string): Step[] {
     // Extract the XML content between <boltArtifact> tags
     const xmlMatch = response.match(/<boltArtifact[^>]*>([\s\S]*?)<\/boltArtifact>/);
-    
+
     if (!xmlMatch) {
       return [];
     }
-  
+
     const xmlContent = xmlMatch[1];
     const steps: Step[] = [];
-    let stepId = 1;
   
     // Extract artifact title
     const titleMatch = response.match(/title="([^"]*)"/);
@@ -83,6 +84,6 @@ export function parseXml(response: string): Step[] {
         });
       }
     }
-  
+    console.log(steps)
     return steps;
   }

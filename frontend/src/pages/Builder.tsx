@@ -174,8 +174,14 @@ useEffect(() => {
     })));
 
     // returns me the response from the LLM
+    // const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+    //   messages: [...prompts, prompt].map(content => ({
+    //     role: "user",
+    //     content
+    //   }))
+    // });
     const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
-      messages: [...prompts, prompt].map(content => ({
+      messages: [...prompts, `follow the same boltArtifact format as demonstrated in previous examples and always close all the tags at the end of each response. Now create a complete response for this prompt: ${prompt}`].map(content => ({
         role: "user",
         content
       }))
@@ -243,7 +249,7 @@ useEffect(() => {
                   <button onClick={async () => {
                     const newMessage = {
                       role: "user" as "user",
-                      content: userPrompt
+                      content: `follow the same boltArtifact format as demonstrated in previous examples and always close all the tags at the end of each response.now continue the response with this ${userPrompt}`
                     };
 
                     setLoading(true);
@@ -275,7 +281,7 @@ useEffect(() => {
               {activeTab === 'code' ? (
                 <CodeEditor file={selectedFile} />
               ) : (
-                <PreviewFrame WebContainer={webcontainer} file={selectedFile} />
+                <PreviewFrame webContainer={webcontainer} files={selectedFile} />
               )}
             </div> 
           </div>
