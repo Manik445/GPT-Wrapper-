@@ -13,8 +13,8 @@ import { BASE_PROMPT , getSystemPrompt } from "./prompt"
 import { basePrompt as REACT_BASE_PROMPT } from './defaults/react'
 import { basePrompt as NODE_BASE_PROMPT } from "./defaults/node"
 
-const groq = new Groq() // creates a new instance for groq 
-
+const groq = new Groq({apiKey:GROQ_API}) // creates a new instance for groq 
+ 
 // template for react or node post req
 app.post('/template' , async (req: any , res: any)=>{
     const prompt = req.body.prompt

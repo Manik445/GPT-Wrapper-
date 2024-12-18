@@ -24,7 +24,7 @@ const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const prompt_1 = require("./prompt");
 const react_1 = require("./defaults/react");
 const node_1 = require("./defaults/node");
-const groq = new groq_sdk_1.default(); // creates a new instance for groq 
+const groq = new groq_sdk_1.default({ apiKey: GROQ_API }); // creates a new instance for groq 
 // template for react or node post req
 app.post('/template', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
